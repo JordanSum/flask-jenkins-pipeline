@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
-db_uri = os.environ.get('DATABASE_URL')
+db_uri = os.environ.get('databaseurl')
 
 app = Flask(__name__)
 

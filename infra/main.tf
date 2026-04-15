@@ -33,7 +33,7 @@ resource "azurerm_subnet" "db_subnet" {
     name = "db-subnet"
     resource_group_name = azurerm_resource_group.rg.name
     virtual_network_name = azurerm_virtual_network.vnet.name
-    address_prefixes = ["192.168.2.0/16"]
+    address_prefixes = ["192.168.2.0/24"]
 
     delegation {
         name = "db-delegation"
@@ -71,11 +71,14 @@ resource "azurerm_postgresql_flexible_server" "postgresql" {
   administrator_login = var.sql_username
   administrator_password = var.sql_password
   delegated_subnet_id = azurerm_subnet.db_subnet.id
-  zone = "1"
 
   storage_mb = 32768
+  storage_tier = "P4"
   sku_name = "B_Standard_B1ms"
 
+  public_network_access_enabled = false
+
+  private_dns_zone_id = azurerm_private_dns_zone.postgres_dns.id
   depends_on = [azurerm_private_dns_zone_virtual_network_link.postgres_dns_link]
 }
 
@@ -107,12 +110,19 @@ resource "azurerm_key_vault" "kv" {
   location                    = var.location
   tenant_id                   = data.azurerm_client_config.current.tenant_id
   sku_name                    = "standard"
+
+  lifecycle {
+    prevent_destroy = false
+    ignore_changes  = []
+  }
 }
 
 resource "azurerm_key_vault_secret" "db_url" {
-    name = "DATABASE-URL"
+    name = "databaseurl"
     value = "postgresql://${var.sql_username}:${var.sql_password}@${azurerm_postgresql_flexible_server.postgresql.fqdn}:5432/${var.db_name}"
     key_vault_id = azurerm_key_vault.kv.id
+
+    depends_on = [ azurerm_key_vault.kv ]
 }
 
 # App Services
@@ -146,7 +156,7 @@ resource "azurerm_linux_web_app" "app" {
 
   app_settings = {
     FLASK_ENV    = "production"
-    DATABASE_URL = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.db_url.id})"
+    databaseurl = "@Microsoft.KeyVault(SecretUri=${azurerm_key_vault_secret.db_url.id})"
   }
 }
 
@@ -165,11 +175,21 @@ resource "azurerm_role_assignment" "app_acr_pull" {
 
 # Grant App Service managed identity access to Key Vault
 resource "azurerm_key_vault_access_policy" "app_kv_policy" {
+    depends_on = [azurerm_linux_web_app.app, azurerm_key_vault.kv]
   key_vault_id = azurerm_key_vault.kv.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
   object_id    = azurerm_linux_web_app.app.identity[0].principal_id
 
   secret_permissions = ["Get", "List"]
+}
+
+# Grant current user/service principal access to manage secrets in Key Vault
+resource "azurerm_key_vault_access_policy" "current_user_kv_policy" {
+  key_vault_id = azurerm_key_vault.kv.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = data.azurerm_client_config.current.object_id
+
+  secret_permissions = ["Get", "Set", "Delete", "List"]
 }
 
 # Jenkins VM
@@ -253,42 +273,4 @@ resource "azurerm_linux_virtual_machine" "jenkins" {
     sku       = "22_04-lts"
     version   = "latest"
   }
-
-    user_data = <<-EOF
-            #!/bin/bash
-
-            # Wait for system stabilization
-            wait 60
-            
-            sudo apt-get update && sudo apt-get upgrade -y
-
-            # Install Java
-            sudo apt-get install -y openjdk-17-jdk
-
-            wait 60
-
-            # Install Jenkins
-            curl -fsSL https://pkg.jenkins.io/debian/jenkins.io-2023.key | sudo tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
-            echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian binary/ | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
-            sudo apt update && sudo apt install -y jenkins
-
-            wait 120
-            
-            
-            # Install Docker
-            curl -fsSL https://get.docker.com | sudo sh
-            sudo usermod -aG docker jenkins
-
-            wait 120
-
-            # Install Azure CLI
-            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-
-            wait 120
-
-            # Start and enable Jenkins
-            sudo systemctl start jenkins
-            sudo systemctl enable jenkins
-
-          EOF
 }

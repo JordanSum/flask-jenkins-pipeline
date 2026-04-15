@@ -11,7 +11,6 @@ pipeline {
         RESOURCE_GROUP = credentials('RESOURCE_GROUP')
         IMAGE_NAME = credentials('IMAGE_NAME')
         IMAGE_TAG = "${env.BUILD_NUMBER}"
-        DATABASE_URL = credentials('DATABASE_URL')
     }
 
     stages {
