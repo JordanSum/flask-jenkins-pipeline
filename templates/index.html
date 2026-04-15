@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block head %}{% endblock %}
+<title>Home Page</title>
+
+{% block body %}
+<div class="content">
+            <h1>Task List</h1>
+
+            {% if tasks | length < 1 %}
+                <p>You have no tasks, create one here.</p>
+            {% else %}
+                <p>You have {{ tasks|length }} tasks.</p>
+            <table>
+                <tr>
+                    <th>Task</th>
+                    <th>Added</th>
+                    <th>Actions</th>
+                </tr>
+                {% for task in tasks %}
+                    <tr>
+                        <td>{{ task.content }}</td>
+                        <td>{{ task.created.strftime("%Y-%m-%d") }}</td>
+                        <td>
+                            <a href="/edit/{{ task.id }}">Edit</a>
+                            <br/>
+                            <a href="/delete/{{ task.id }}">Delete</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+            <form action="/" method="POST">
+                <input type="text" name="content" id="content" placeholder="Add an item to table"/>
+                <input type="submit" value="Add Task" id="btn_add"/>
+            </form>
+        </div>
+
+{% endblock %}

@@ -1,0 +1,17 @@
+Copy and paste this template into a terraform.tfvars file and fill out the variables to use in your development deployment.
+
+rg = <resource-group-name>
+
+location = <cloud-infra-location>
+
+acr_name = <azure-container-registry-name>
+
+postgres_server_name = <server-name>
+
+sql_username = <sql-username>
+
+sql_password = <sql-password>
+
+db_name = <database-name> #might need to be same db name in app.py
+
+app_name = <web-app-name>
