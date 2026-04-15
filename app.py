@@ -1,6 +1,8 @@
 from flask import Flask, render_template, redirect, request
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
 
 import os
 db_uri = os.environ.get('DATABASE_URL')
