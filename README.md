@@ -1,3 +1,5 @@
+# Being Created
+<!--
 # Instructions
 
 ## Setup
@@ -28,3 +30,4 @@ To retrieve the initial admin password for jenkins, ssh into the instance and ru
 ```bash
 sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 ```
+-->
