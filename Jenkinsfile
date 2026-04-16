@@ -49,16 +49,6 @@ pipeline {
             }
         }
 
-        stage('Run Migration') {
-            steps {
-                sh '''
-                    docker run --rm \
-                    -e DATABASE_URL=$DATABASE_URL \
-                    ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG} \
-                    flask db upgrade
-                '''
-            }
-        }
 
         stage('Deploy to App Service') {
             steps {
