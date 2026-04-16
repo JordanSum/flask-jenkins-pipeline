@@ -58,7 +58,11 @@ pipeline {
                     --resource-group $RESOURCE_GROUP \
                     --docker-custom-image-name ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG} \
                     --docker-registry-server-url https://${ACR_NAME}.azurecr.io \
-                az webapp restart --name $APP_NAME --resource-group $RESOURCE_GROUP 
+                '''
+                sh '''
+                az webapp restart \
+                    --name $APP_NAME \
+                    --resource-group $RESOURCE_GROUP 
                 '''
             }
         }
