@@ -60,10 +60,11 @@ pipeline {
                     --container-registry-url https://${ACR_NAME}.azurecr.io
 
                 '''
-                sh'''
-                    az resource update \
-                        --ids /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Web/sites/$APP_NAME/ \
-                        --set properties.siteConfig.acrUseManagedIdentityCreds=true
+                sh '''
+                    az webapp update \
+                        --name $APP_NAME \
+                        --resource-group $RESOURCE_GROUP \
+                        --set siteConfig.acrUseManagedIdentityCreds=true
                 '''
 
                 sh '''
