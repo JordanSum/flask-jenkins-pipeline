@@ -29,20 +29,12 @@ resource "azurerm_subnet" "app_subnet" {
   }
 }
 
-resource "azurerm_subnet" "db_subnet" {
-    name = "db-subnet"
+resource "azurerm_subnet" "private_endpoints" {
+    name = "private-endpoints-subnet"
     resource_group_name = azurerm_resource_group.rg.name
     virtual_network_name = azurerm_virtual_network.vnet.name
     address_prefixes = ["192.168.2.0/24"]
-
-    delegation {
-        name = "db-delegation"
-        service_delegation {
-            name = "Microsoft.DBforPostgreSQL/flexibleServers"
-            actions = ["Microsoft.Network/virtualNetworks/subnets/action"]
-        }
-    }
-}
+  }
 
 resource "azurerm_subnet" "jenkins_subnet" {
     name = "jenkins-subnet"
@@ -70,7 +62,6 @@ resource "azurerm_postgresql_flexible_server" "postgresql" {
   version             = "15"
   administrator_login = var.sql_username
   administrator_password = var.sql_password
-  delegated_subnet_id = azurerm_subnet.db_subnet.id
 
   storage_mb = 32768
   storage_tier = "P4"
@@ -78,13 +69,39 @@ resource "azurerm_postgresql_flexible_server" "postgresql" {
 
   public_network_access_enabled = false
 
-  private_dns_zone_id = azurerm_private_dns_zone.postgres_dns.id
   depends_on = [azurerm_private_dns_zone_virtual_network_link.postgres_dns_link]
 }
 
+# Create a database in the PostgreSQL Flexible Server
+resource "azurerm_postgresql_flexible_server_database" "db" {
+    name = var.db_name
+    server_id = azurerm_postgresql_flexible_server.postgresql.id
+    charset = "UTF8" 
+}
+
+# Private Endpoint for PostgreSQL and Private DNS Zone
 resource "azurerm_private_dns_zone" "postgres_dns" {
   name                = "privatelink.postgres.database.azure.com"
   resource_group_name = azurerm_resource_group.rg.name
+}
+
+resource "azurerm_private_endpoint" "postgres_pe" {
+  name                = "psql-pe"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  subnet_id           = azurerm_subnet.private_endpoints.id
+
+  private_service_connection {
+    name                           = "postgres-privateserviceconnection"
+    private_connection_resource_id = azurerm_postgresql_flexible_server.postgresql.id
+    is_manual_connection           = false
+    subresource_names              = ["postgresqlServer"]
+  }
+
+  private_dns_zone_group {
+    name                 = "postgres-dns-zone-group"
+    private_dns_zone_ids = [azurerm_private_dns_zone.postgres_dns.id]
+  }
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "postgres_dns_link" {
@@ -92,12 +109,6 @@ resource "azurerm_private_dns_zone_virtual_network_link" "postgres_dns_link" {
   resource_group_name   = azurerm_resource_group.rg.name
   private_dns_zone_name = azurerm_private_dns_zone.postgres_dns.name
   virtual_network_id    = azurerm_virtual_network.vnet.id
-}
-
-resource "azurerm_postgresql_flexible_server_database" "db" {
-    name = var.db_name
-    server_id = azurerm_postgresql_flexible_server.postgresql.id
-    charset = "UTF8" 
 }
 
 # keyvault
@@ -117,9 +128,10 @@ resource "azurerm_key_vault" "kv" {
   }
 }
 
+# Create a secret in Key Vault for the database connection string
 resource "azurerm_key_vault_secret" "db_url" {
     name = "databaseurl"
-    value = "postgresql://${var.sql_username}:${var.sql_password}@${azurerm_postgresql_flexible_server.postgresql.fqdn}:5432/${var.db_name}"
+    value = "postgresql+psycopg2://${var.sql_username}:${var.sql_password}@${azurerm_postgresql_flexible_server.postgresql.fqdn}:5432/${var.db_name}"
     key_vault_id = azurerm_key_vault.kv.id
 
     depends_on = [ azurerm_key_vault.kv ]
@@ -273,4 +285,50 @@ resource "azurerm_linux_virtual_machine" "jenkins" {
     sku       = "22_04-lts"
     version   = "latest"
   }
+  
+  custom_data = base64encode(<<-EOF
+    #!/bin/bash
+    #wait for system to initialize
+    wait 60
+    
+    sudo apt update
+
+    # Install Java and Jenkins
+    sudo apt install -y fontconfig openjdk-21-jre
+    
+    wait 30
+    sudo mkdir -p /etc/apt/keyrings
+    sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+    echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
+    
+    sudo apt update
+    
+    # wait for update to complete
+    wait 30
+    
+    sudo apt install -y jenkins
+    
+    # wait for jenkins to finish installing
+    wait 30
+
+    # Install Docker
+    curl -fsSL https://get.docker.com | sudo sh
+
+    sudo usermod -aG docker jenkins
+    
+    # wait for docker to finish installing
+    wait 60
+
+    # Install Azure CLI
+    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+    # wait for Azure CLI to finish installing
+    wait 60
+
+    # enable and start Jenkins
+    sudo systemctl enable jenkins
+    sudo systemctl start jenkins
+    
+  EOF
+  )
 }
