@@ -56,10 +56,9 @@ pipeline {
                 az webapp config container set \
                     --name $APP_NAME \
                     --resource-group $RESOURCE_GROUP \
-                    --container-image-name ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG} \
-                    --container-registry-url https://${ACR_NAME}.azurecr.io
+                    --docker-custom-image-name ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG} \
+                    --docker-registry-server-url https://${ACR_NAME}.azurecr.io \
                     --container-registry-user-managed-identity
-                    
 
                 '''
                 sh '''
