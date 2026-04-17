@@ -56,11 +56,16 @@ pipeline {
                 az webapp config container set \
                     --name $APP_NAME \
                     --resource-group $RESOURCE_GROUP \
-                    --docker-custom-image-name ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG} \
-                    --docker-registry-server-url https://${ACR_NAME}.azurecr.io \
-                    --container-registry-user-managed-identity
+                    --container-image-name ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG} \
+                    --container-registry-url https://${ACR_NAME}.azurecr.io
 
                 '''
+                sh'''
+                    az resource update \
+                        --ids /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Web/sites/$APP_NAME/ \
+                        --set properties.siteConfig.acrUseManagedIdentityCreds=true
+                '''
+
                 sh '''
                 az webapp restart \
                     --name $APP_NAME \
