@@ -15,3 +15,5 @@ sql_password = <sql-password>
 db_name = <database-name> #might need to be same db name in app.py
 
 app_name = <web-app-name>
+
+your_ip = <your-public-ip>
