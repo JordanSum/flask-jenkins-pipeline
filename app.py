@@ -12,6 +12,7 @@ app = Flask(__name__)
 # SQLAlchemy configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 db = SQLAlchemy(app)
+print("DB URI in use:", app.config['SQLALCHEMY_DATABASE_URI'])
 
 # Row of data
 class MyTask(db.Model):
