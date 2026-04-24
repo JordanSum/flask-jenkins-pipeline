@@ -1,39 +1,121 @@
 {% extends "base.html" %}
 
-{% block head %}{% endblock %}
-<title>Home Page</title>
+{% block title %}TaskFlow — My Tasks{% endblock %}
 
 {% block body %}
-<div class="content">
-            <h1>Task List</h1>
+{% set total = tasks|length %}
+{% set completed = tasks|selectattr('complete')|list|length %}
+{% set pending = total - completed %}
+{% set progress = ((completed / total * 100) | int) if total > 0 else 0 %}
 
-            {% if tasks | length < 1 %}
-                <p>You have no tasks, create one here.</p>
-            {% else %}
-                <p>You have {{ tasks|length }} tasks.</p>
-            <table>
-                <tr>
-                    <th>Task</th>
-                    <th>Added</th>
-                    <th>Actions</th>
-                </tr>
-                {% for task in tasks %}
-                    <tr>
-                        <td>{{ task.content }}</td>
-                        <td>{{ task.created.strftime("%Y-%m-%d") }}</td>
-                        <td>
-                            <a href="/edit/{{ task.id }}">Edit</a>
-                            <br/>
-                            <a href="/delete/{{ task.id }}">Delete</a>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </table>
-            {% endif %}
-            <form action="/" method="POST">
-                <input type="text" name="content" id="content" placeholder="Add an item to table"/>
-                <input type="submit" value="Add Task" id="btn_add"/>
-            </form>
+<div class="app-container">
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="app-logo">
+            <div class="app-logo-icon">
+                <i class="fas fa-check-double"></i>
+            </div>
+            <h1 class="app-title">TaskFlow</h1>
         </div>
+        <p class="app-subtitle">Stay organized, stay productive</p>
+    </header>
 
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-number accent">{{ total }}</div>
+            <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number success">{{ completed }}</div>
+            <div class="stat-label">Done</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number warning">{{ pending }}</div>
+            <div class="stat-label">Pending</div>
+        </div>
+    </div>
+
+    <!-- Progress bar -->
+    {% if total > 0 %}
+    <div class="progress-section">
+        <div class="progress-header">
+            <span>Overall progress</span>
+            <span>{{ progress }}% complete</span>
+        </div>
+        <div class="progress-bar-track">
+            <div class="progress-bar-fill" style="width: {{ progress }}%;"></div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Add task -->
+    <form action="/" method="POST" class="add-task-form">
+        <input
+            type="text"
+            name="content"
+            id="content"
+            class="add-task-input"
+            placeholder="What needs to be done?"
+            autocomplete="off"
+            required
+        />
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Task
+        </button>
+    </form>
+
+    <!-- Task list -->
+    <div class="section-header">
+        <span class="section-title">Tasks</span>
+        {% if total > 0 %}<span class="badge">{{ total }}</span>{% endif %}
+    </div>
+
+    {% if total < 1 %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <h3>No tasks yet</h3>
+            <p>Add your first task above to get started!</p>
+        </div>
+    {% else %}
+        <div class="task-list">
+            {% for task in tasks %}
+            <div class="task-item {% if task.complete %}completed{% endif %}">
+
+                <!-- Toggle complete -->
+                <a href="/toggle/{{ task.id }}"
+                   class="task-toggle {% if task.complete %}checked{% endif %}"
+                   title="{% if task.complete %}Mark incomplete{% else %}Mark complete{% endif %}">
+                    {% if task.complete %}<i class="fas fa-check"></i>{% endif %}
+                </a>
+
+                <!-- Content -->
+                <div class="task-body">
+                    <div class="task-content">{{ task.content }}</div>
+                    <div class="task-meta">
+                        <i class="far fa-clock"></i>
+                        Added {{ task.created.strftime("%b %d, %Y") }}
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="task-actions">
+                    <a href="/edit/{{ task.id }}" class="btn btn-icon" title="Edit">
+                        <i class="fas fa-pen"></i>
+                    </a>
+                    <a href="/delete/{{ task.id }}"
+                       class="btn btn-icon danger"
+                       title="Delete"
+                       onclick="return confirm('Delete this task?')">
+                        <i class="fas fa-trash"></i>
+                    </a>
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+</div>
 {% endblock %}

@@ -57,6 +57,17 @@ def delete(id:int):
     except Exception as e:
         return f"An error occurred while deleting the task: {e}"
     
+# Toggle task complete/incomplete
+@app.route("/toggle/<int:id>")
+def toggle(id: int):
+    task = MyTask.query.get_or_404(id)
+    try:
+        task.complete = 0 if task.complete else 1
+        db.session.commit()
+        return redirect('/')
+    except Exception as e:
+        return f"An error occurred while updating the task: {e}"
+
 # Edit the task
 @app.route("/edit/<int:id>", methods=['POST', 'GET'])
 def edit(id:int):
