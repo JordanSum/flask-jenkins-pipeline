@@ -323,6 +323,8 @@ resource "azurerm_linux_virtual_machine" "jenkins" {
     # wait for docker to finish installing
     wait 60
 
+    sudo chmod 666 /var/run/docker.sock
+
     # Install Azure CLI
     curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 
