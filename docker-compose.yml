@@ -4,7 +4,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - databaseurl=postgresql://postgres:password@postgres:5432/postgres
+      - databaseurl=postgresql://postgres:password@postgres:5432/postgres # This is a placeholder connection string. In production, use environment variables or secrets management to handle sensitive information.
     depends_on:
       postgres:
         condition: service_healthy
@@ -13,7 +13,7 @@ services:
     image: postgres:15
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: password # This is a placeholder. In production, use a secure password and consider using environment variables or secrets management.
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"

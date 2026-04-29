@@ -12,7 +12,7 @@ app = Flask(__name__)
 # SQLAlchemy configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 db = SQLAlchemy(app)
-print("DB URI in use:", app.config['SQLALCHEMY_DATABASE_URI'])
+print("Database connected")
 
 # Row of data
 class MyTask(db.Model):
@@ -38,7 +38,7 @@ def index():
             return redirect('/')
         except Exception as e:
             print(f"An error occurred while adding the task: {e}")
-            return f"An error occurred while adding the task: {e}"
+            return "An error occurred while adding a task"
 
     # See all tasks
     else:
@@ -55,7 +55,8 @@ def delete(id:int):
         db.session.commit()
         return redirect('/')
     except Exception as e:
-        return f"An error occurred while deleting the task: {e}"
+        print(f"An error occurred while deleting a task: {e}")
+        return "An error occurred while deleting a task"
     
 # Toggle task complete/incomplete
 @app.route("/toggle/<int:id>")
@@ -66,7 +67,7 @@ def toggle(id: int):
         db.session.commit()
         return redirect('/')
     except Exception as e:
-        return f"An error occurred while updating the task: {e}"
+        return f"An error occurred while updating the task"
 
 # Edit the task
 @app.route("/edit/<int:id>", methods=['POST', 'GET'])
@@ -78,7 +79,7 @@ def edit(id:int):
             db.session.commit()
             return redirect('/')
         except Exception as e:
-            return f"An error occurred while editing the task: {e}"
+            return f"An error occurred while editing a task"
     else:
         return render_template('edit.html', task=edit_task)
 
